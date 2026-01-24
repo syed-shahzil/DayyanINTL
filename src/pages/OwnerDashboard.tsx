@@ -1,7 +1,7 @@
 import { useContext, useEffect, useState } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import { ArrowLeft, BarChart3, ShoppingCart, DollarSign, Users } from 'lucide-react';
 
 export function OwnerDashboard() {
@@ -27,25 +27,17 @@ export function OwnerDashboard() {
 
   async function fetchStats() {
     try {
-      const [ordersRes, usersRes, productsRes] = await Promise.all([
-        supabase.from('orders').select('*, order_items(*)'),
-        supabase.from('users').select('id', { count: 'exact' }),
-        supabase.from('products').select('id', { count: 'exact' }),
-      ]);
-
-      const orders = ordersRes.data || [];
-      const totalRevenue = orders.reduce((sum, order) => sum + order.total_amount, 0);
-      const totalCost = orders.reduce((sum, order) => sum + (order.subtotal * 0.4), 0);
-      const totalProfit = totalRevenue - totalCost;
-
+      const data = await api.stats.dashboard();
       setStats({
-        totalOrders: orders.length,
-        totalRevenue,
-        totalProfit,
-        totalUsers: usersRes.count || 0,
-        totalProducts: productsRes.count || 0,
-        recentOrders: orders.slice(0, 10),
+        totalOrders: data.totalOrders,
+        totalRevenue: data.totalRevenue,
+        totalProfit: data.totalProfit,
+        totalUsers: data.totalUsers,
+        totalProducts: data.totalProducts,
+        recentOrders: data.recentOrders,
       });
+    } catch (e) {
+      console.error("Failed to fetch stats", e);
     } finally {
       setLoading(false);
     }
@@ -162,11 +154,10 @@ export function OwnerDashboard() {
                   </td>
                   <td className="px-6 py-4 text-sm">
                     <span
-                      className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                        order.status === 'delivered'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}
+                      className={`px-2 py-1 rounded-full text-xs font-semibold ${order.status === 'delivered'
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-yellow-100 text-yellow-800'
+                        }`}
                     >
                       {order.status}
                     </span>

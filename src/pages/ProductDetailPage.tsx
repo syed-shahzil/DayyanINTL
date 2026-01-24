@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import { AuthContext } from '../context/AuthContext';
 import { CartContext } from '../context/CartContext';
 import { Heart, Share2, ShoppingCart, ArrowLeft, Minus, Plus } from 'lucide-react';
@@ -33,32 +33,26 @@ export function ProductDetailPage() {
   }, [id]);
 
   async function fetchProduct() {
-    const { data } = await supabase
-      .from('products')
-      .select('*, category:categories(*)')
-      .eq('id', id)
-      .eq('is_active', true)
-      .maybeSingle();
-
-    if (data) {
-      setProduct(data as Product);
+    try {
+      const data = await api.products.get(id!);
+      setProduct(data as unknown as Product); // Ensure type match or use shared types
       if (auth?.user) {
         checkWishlist(data.id);
       }
+    } catch (e) {
+      console.error("Failed to fetch product", e);
     }
     setLoading(false);
   }
 
   async function checkWishlist(productId: string) {
     if (!auth?.user) return;
-    const { data } = await supabase
-      .from('wishlist_items')
-      .select('id')
-      .eq('user_id', auth.user.id)
-      .eq('product_id', productId)
-      .maybeSingle();
-
-    setWishlisted(!!data);
+    try {
+      const isWishlisted = await api.wishlist.check(productId);
+      setWishlisted(isWishlisted);
+    } catch (e) {
+      console.error("Failed to check wishlist", e);
+    }
   }
 
   const handleAddToCart = async () => {
@@ -80,18 +74,16 @@ export function ProductDetailPage() {
       return;
     }
 
-    if (wishlisted) {
-      await supabase
-        .from('wishlist_items')
-        .delete()
-        .eq('user_id', auth.user.id)
-        .eq('product_id', product!.id);
-      setWishlisted(false);
-    } else {
-      await supabase
-        .from('wishlist_items')
-        .insert({ user_id: auth.user.id, product_id: product!.id });
-      setWishlisted(true);
+    try {
+      if (wishlisted) {
+        await api.wishlist.remove(product!.id);
+        setWishlisted(false);
+      } else {
+        await api.wishlist.add(product!.id);
+        setWishlisted(true);
+      }
+    } catch (e) {
+      console.error("Wishlist action failed", e);
     }
   };
 
@@ -167,11 +159,10 @@ export function ProductDetailPage() {
               <p className="text-4xl font-bold text-primary-600">${product.price.toFixed(2)}</p>
               <div className="mt-4 flex items-center gap-2">
                 <div
-                  className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
-                    product.stock_quantity > 0
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-red-100 text-red-700'
-                  }`}
+                  className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${product.stock_quantity > 0
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-red-100 text-red-700'
+                    }`}
                 >
                   {product.stock_quantity > 0
                     ? `${product.stock_quantity} In Stock`
@@ -235,11 +226,10 @@ export function ProductDetailPage() {
 
                 <button
                   onClick={handleWishlist}
-                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg border font-semibold transition-colors ${
-                    wishlisted
-                      ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'
-                      : 'border-gray-300 text-gray-600 hover:border-red-200 hover:text-red-600'
-                  }`}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg border font-semibold transition-colors ${wishlisted
+                    ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'
+                    : 'border-gray-300 text-gray-600 hover:border-red-200 hover:text-red-600'
+                    }`}
                 >
                   <Heart size={20} fill={wishlisted ? 'currentColor' : 'none'} />
                 </button>

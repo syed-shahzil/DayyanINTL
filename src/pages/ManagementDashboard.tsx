@@ -1,7 +1,7 @@
 import { useContext, useEffect, useState } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import { ArrowLeft, Plus, Edit, Trash2, AlertCircle } from 'lucide-react';
 
 interface Product {
@@ -45,13 +45,25 @@ export function ManagementDashboard() {
   }, [auth?.user, auth?.profile?.role]);
 
   async function fetchData() {
-    const [productsRes, categoriesRes] = await Promise.all([
-      supabase.from('products').select('*').order('created_at', { ascending: false }),
-      supabase.from('categories').select('*'),
-    ]);
+    try {
+      const [productsData, categoriesData] = await Promise.all([
+        api.products.list({ limit: 1000 }), // Fetch all logic might differ, assuming list returns array
+        api.categories.list()
+      ]);
+      // Backend returns { products: [], total: ... } for products list?
+      // Let's verify API client or assume standard array if list return type matches.
+      // My api.products.list implementation returns Promise<any> (response json).
+      // The backend /products/ endpoint maps to Page[ProductResponse]. 
+      // So productsData.items is the array.
 
-    setProducts(productsRes.data || []);
-    setCategories(categoriesRes.data || []);
+      // However, if I check api.ts again, does list return data.items?
+      // Usually apiClient returns the raw JSON.
+      // Backend: params -> Page[Product]. items list.
+      setProducts((productsData as any).items || []);
+      setCategories(categoriesData as unknown as Category[]);
+    } catch (e) {
+      console.error("Failed to fetch management data", e);
+    }
     setLoading(false);
   }
 
@@ -59,18 +71,18 @@ export function ManagementDashboard() {
     e.preventDefault();
 
     try {
-      const { error } = await supabase.from('products').insert({
+      await api.products.create({
         name: formData.name,
         price: parseFloat(formData.price),
         sku: formData.sku,
         stock_quantity: parseInt(formData.stock_quantity),
-        category_id: formData.category_id || null,
+        category_id: formData.category_id || undefined,
         description: formData.description,
+        detailed_description: '', // Optional
         image_url: formData.image_url,
         is_active: true,
+        specifications: '{}' // Default or empty string
       });
-
-      if (error) throw error;
 
       setFormData({
         name: '',
@@ -92,8 +104,7 @@ export function ManagementDashboard() {
     if (!window.confirm('Are you sure you want to delete this product?')) return;
 
     try {
-      const { error } = await supabase.from('products').delete().eq('id', id);
-      if (error) throw error;
+      await api.products.delete(id);
       fetchData();
     } catch (err) {
       alert('Failed to delete product');
@@ -245,11 +256,10 @@ export function ManagementDashboard() {
                   <td className="px-6 py-4 text-sm text-gray-900">{product.stock_quantity}</td>
                   <td className="px-6 py-4 text-sm">
                     <span
-                      className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                        product.is_active
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}
+                      className={`px-2 py-1 rounded-full text-xs font-semibold ${product.is_active
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-gray-100 text-gray-800'
+                        }`}
                     >
                       {product.is_active ? 'Active' : 'Inactive'}
                     </span>

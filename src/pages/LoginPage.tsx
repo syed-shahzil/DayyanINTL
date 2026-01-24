@@ -2,6 +2,7 @@ import { useContext, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { Mail, Lock, AlertCircle } from 'lucide-react';
+import companyLogo from '../assets/company_logo.jpeg';
 
 export function LoginPage() {
   const [email, setEmail] = useState('');
@@ -31,8 +32,8 @@ export function LoginPage() {
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-200">
           <div className="bg-gradient-to-r from-primary-600 to-teal-600 p-8 text-center">
-            <div className="w-16 h-16 bg-white rounded-lg flex items-center justify-center mx-auto mb-4 shadow-lg">
-              <span className="text-2xl font-bold bg-gradient-to-br from-primary-600 to-teal-600 bg-clip-text text-transparent">D</span>
+            <div className="w-16 h-16 bg-white rounded-lg flex items-center justify-center mx-auto mb-4 shadow-lg overflow-hidden">
+              <img src={companyLogo} alt="DayyanINTL Logo" className="w-full h-full object-contain" />
             </div>
             <h1 className="text-2xl font-bold text-white">DayyanINTL</h1>
             <p className="text-primary-100 text-sm mt-1">Surgical Instruments</p>

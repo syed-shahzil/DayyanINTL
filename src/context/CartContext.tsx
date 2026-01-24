@@ -1,5 +1,5 @@
 import { createContext, ReactNode, useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 
 export interface CartItem {
   id: string;
@@ -40,38 +40,28 @@ export function CartProvider({ children, userId }: { children: ReactNode; userId
 
   async function fetchCart() {
     setLoading(true);
-    const { data } = await supabase
-      .from('cart_items')
-      .select('*, product:products(*)')
-      .eq('user_id', userId);
-
-    if (data) {
-      setItems(data as CartItem[]);
+    try {
+      const data = await api.cart.get();
+      // Backend returns generic product structure, map if necessary but likely compatible
+      setItems(data as any as CartItem[]);
+    } catch (e) {
+      console.error("Failed to fetch cart", e);
     }
     setLoading(false);
   }
 
   async function addItem(productId: string, quantity: number) {
     if (!userId) return;
-
-    const existing = items.find((item) => item.product_id === productId);
-
-    if (existing) {
-      await supabase
-        .from('cart_items')
-        .update({ quantity: existing.quantity + quantity })
-        .eq('id', existing.id);
-    } else {
-      await supabase
-        .from('cart_items')
-        .insert({ user_id: userId, product_id: productId, quantity });
+    try {
+      await api.cart.add(productId, quantity);
+      await fetchCart();
+    } catch (e) {
+      console.error("Failed to add item", e);
     }
-
-    await fetchCart();
   }
 
   async function removeItem(cartItemId: string) {
-    await supabase.from('cart_items').delete().eq('id', cartItemId);
+    await api.cart.remove(cartItemId);
     await fetchCart();
   }
 
@@ -79,23 +69,22 @@ export function CartProvider({ children, userId }: { children: ReactNode; userId
     if (quantity <= 0) {
       await removeItem(cartItemId);
     } else {
-      await supabase
-        .from('cart_items')
-        .update({ quantity })
-        .eq('id', cartItemId);
+      await api.cart.update(cartItemId, quantity);
       await fetchCart();
     }
   }
 
   async function clearCart() {
     if (!userId) return;
-    await supabase.from('cart_items').delete().eq('user_id', userId);
+    await api.cart.clear();
     setItems([]);
   }
 
   function getCartTotal() {
     return items.reduce((total, item) => {
-      return total + (item.product?.price || 0) * item.quantity;
+      // Ensure product exists and price is number
+      const price = typeof item.product?.price === 'string' ? parseFloat(item.product.price) : (item.product?.price || 0);
+      return total + price * item.quantity;
     }, 0);
   }
 

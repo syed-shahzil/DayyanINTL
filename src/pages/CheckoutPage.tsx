@@ -2,7 +2,7 @@ import { useContext, useState } from 'react';
 import { CartContext } from '../context/CartContext';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import { ArrowLeft, AlertCircle } from 'lucide-react';
 
 export function CheckoutPage() {
@@ -46,40 +46,14 @@ export function CheckoutPage() {
         throw new Error('Please fill in all address fields');
       }
 
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          user_id: auth.user.id,
-          status: 'pending',
-          subtotal,
-          tax,
-          shipping_cost: 0,
-          total_amount: finalTotal,
-          shipping_address: `${address}, ${city}, ${country} ${postalCode}`,
-          delivery_notes: deliveryNotes,
-        })
-        .select()
-        .maybeSingle();
+      await api.orders.create({
+        items: cart.items.map(item => ({ product_id: item.product_id, quantity: item.quantity })),
+        shipping_address: `${address}, ${city}, ${country} ${postalCode}`,
+        delivery_notes: deliveryNotes
+      });
 
-      if (orderError) throw orderError;
-
-      if (order) {
-        const orderItems = cart.items.map((item) => ({
-          order_id: order.id,
-          product_id: item.product_id,
-          quantity: item.quantity,
-          price_at_purchase: item.product?.price || 0,
-        }));
-
-        const { error: itemsError } = await supabase
-          .from('order_items')
-          .insert(orderItems);
-
-        if (itemsError) throw itemsError;
-
-        await cart.clearCart();
-        navigate(`/orders`);
-      }
+      await cart.clearCart();
+      navigate(`/orders`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Checkout failed');
     } finally {

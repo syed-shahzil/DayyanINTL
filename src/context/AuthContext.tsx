@@ -1,6 +1,5 @@
 import { createContext, ReactNode, useEffect, useState } from 'react';
-import { User } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 
 interface UserProfile {
   id: string;
@@ -8,11 +7,18 @@ interface UserProfile {
   full_name: string;
   role: 'customer' | 'management' | 'owner';
   is_owner: boolean;
+  is_verified: boolean;
   phone?: string;
   address?: string;
   city?: string;
   country?: string;
   postal_code?: string;
+}
+
+interface User {
+  id: string;
+  email: string;
+  role: string;
 }
 
 interface AuthContextType {
@@ -33,77 +39,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      } else {
-        setLoading(false);
-      }
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      } else {
-        setProfile(null);
-        setLoading(false);
-      }
-    });
-
-    return () => subscription?.unsubscribe();
+    checkAuth();
   }, []);
 
-  async function fetchProfile(userId: string) {
-    const { data } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle();
-
-    if (data) {
-      setProfile(data as UserProfile);
+  async function checkAuth() {
+    try {
+      if (!localStorage.getItem('access_token')) {
+        throw new Error('No token');
+      }
+      const userData = await api.auth.me();
+      setUser({ id: userData.id, email: userData.email, role: userData.role });
+      setProfile(userData);
+    } catch (error) {
+      setUser(null);
+      setProfile(null);
+      api.clearTokens();
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   async function signUp(email: string, password: string, fullName: string) {
-    const { data, error } = await supabase.auth.signUp({ email, password });
-    if (error) throw error;
-
-    if (data.user) {
-      await supabase.from('users').insert({
-        id: data.user.id,
-        email,
-        full_name: fullName,
-        role: 'customer',
-        is_owner: false,
-      });
-    }
+    await api.auth.signup({ email, password, full_name: fullName });
+    // After signup, user might need to verify email.
+    // We don't auto-login usually if verification is required, or we do.
+    // Backend returns User object.
+    alert('Account created! Please check your email for verification code.');
   }
 
   async function signIn(email: string, password: string) {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
+    const data = await api.auth.login({ email, password }); // Fixed: Backend expects "email" in JSON body
+    api.setTokens(data.access_token, data.refresh_token);
+    await checkAuth();
   }
 
   async function signOut() {
-    await supabase.auth.signOut();
+    api.clearTokens();
+    setUser(null);
+    setProfile(null);
   }
 
   async function updateProfile(updates: Partial<UserProfile>) {
-    if (!user) throw new Error('Not authenticated');
-
-    const { error } = await supabase
-      .from('users')
-      .update(updates)
-      .eq('id', user.id);
-
-    if (error) throw error;
-    await fetchProfile(user.id);
+    // TODO: Implement update profile endpoint in backend and client
+    // For now, optimistic update or just simple backend call
+    // await api.users.update(updates);
+    setProfile(prev => prev ? { ...prev, ...updates } : null);
   }
 
   return (

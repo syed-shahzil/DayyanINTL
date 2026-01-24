@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Hero } from '../components/Hero';
 import { CategoryCard } from '../components/CategoryCard';
 import { ProductCard } from '../components/ProductCard';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import {
   Stethoscope,
   Bone,
@@ -52,16 +52,16 @@ export function HomePage() {
   async function fetchData() {
     try {
       const [categoriesData, productsData] = await Promise.all([
-        supabase.from('categories').select('*').order('display_order'),
-        supabase
-          .from('products')
-          .select('*, category:categories(*)')
-          .eq('is_active', true)
-          .limit(6),
+        api.categories.list(),
+        api.products.list({ limit: 6, is_active: true }),
       ]);
 
-      setCategories(categoriesData.data || []);
-      setFeaturedProducts(productsData.data || []);
+      setCategories(categoriesData as Category[]);
+      // data.items handling if backend returns pagination object
+      const products = (productsData as any).items || productsData;
+      setFeaturedProducts(Array.isArray(products) ? products.slice(0, 6) : []);
+    } catch (e) {
+      console.error("Failed to fetch home data", e);
     } finally {
       setLoading(false);
     }

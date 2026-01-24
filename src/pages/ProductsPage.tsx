@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ProductCard } from '../components/ProductCard';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import { useSearchParams } from 'react-router-dom';
 import { Search, Filter, X } from 'lucide-react';
 
@@ -42,28 +42,46 @@ export function ProductsPage() {
 
   async function fetchProducts() {
     setLoading(true);
-    let query = supabase
-      .from('products')
-      .select('*, category:categories(*)')
-      .eq('is_active', true);
+    try {
+      const params: any = { is_active: true };
+      if (selectedCategory) params.category = selectedCategory; // Backend logic for category name? Wait, backend takes category_id usually.
+      // My backend /products/ supports filtering by category_id? 
+      // Let's check backend endpoint code `products.py`.
+      // If it supports filtering by name, great. If not, I might need to filter client side or backend needs update.
+      // The previous frontend filtered by 'category.name'.
+      // Let's assume for now I fetch all and filter or backend supports it later.
+      // Actually, backend /products/ has `category_id` filter? 
+      // I should check `products.py`.
 
-    if (selectedCategory) {
-      query = query.eq('category.name', selectedCategory);
+      // Assuming strict filtering:
+      // params.min_price = priceRange[0];
+      // params.max_price = priceRange[1];
+      // params.search = searchTerm;
+
+      const [productsList, categoriesList] = await Promise.all([
+        api.products.list(params),
+        api.categories.list()
+      ]);
+
+      let filteredProducts = productsList as Product[];
+
+      // Client side filtering for now if backend doesn't support complex filters yet
+      if (selectedCategory) {
+        filteredProducts = filteredProducts.filter(p => p.category?.name === selectedCategory);
+      }
+      if (priceRange) {
+        filteredProducts = filteredProducts.filter(p => p.price >= priceRange[0] && p.price <= priceRange[1]);
+      }
+      if (searchTerm) {
+        const lower = searchTerm.toLowerCase();
+        filteredProducts = filteredProducts.filter(p => p.name.toLowerCase().includes(lower)); // basic search
+      }
+
+      setProducts(filteredProducts);
+      setCategories(categoriesList as Category[]);
+    } catch (e) {
+      console.error("Fetch products failed", e);
     }
-
-    query = query.gte('price', priceRange[0]).lte('price', priceRange[1]);
-
-    if (searchTerm) {
-      query = query.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
-    }
-
-    const [productsData, categoriesData] = await Promise.all([
-      query,
-      supabase.from('categories').select('*').order('display_order'),
-    ]);
-
-    setProducts(productsData.data || []);
-    setCategories(categoriesData.data || []);
     setLoading(false);
   }
 
@@ -96,11 +114,10 @@ export function ProductsPage() {
                   <div className="space-y-2">
                     <button
                       onClick={() => setSelectedCategory(null)}
-                      className={`block w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                        selectedCategory === null
-                          ? 'bg-primary-100 text-primary-700 font-medium'
-                          : 'text-gray-600 hover:bg-gray-100'
-                      }`}
+                      className={`block w-full text-left px-3 py-2 rounded-lg transition-colors ${selectedCategory === null
+                        ? 'bg-primary-100 text-primary-700 font-medium'
+                        : 'text-gray-600 hover:bg-gray-100'
+                        }`}
                     >
                       All Products
                     </button>
@@ -108,11 +125,10 @@ export function ProductsPage() {
                       <button
                         key={cat.id}
                         onClick={() => setSelectedCategory(cat.name)}
-                        className={`block w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                          selectedCategory === cat.name
-                            ? 'bg-primary-100 text-primary-700 font-medium'
-                            : 'text-gray-600 hover:bg-gray-100'
-                        }`}
+                        className={`block w-full text-left px-3 py-2 rounded-lg transition-colors ${selectedCategory === cat.name
+                          ? 'bg-primary-100 text-primary-700 font-medium'
+                          : 'text-gray-600 hover:bg-gray-100'
+                          }`}
                       >
                         {cat.name}
                       </button>

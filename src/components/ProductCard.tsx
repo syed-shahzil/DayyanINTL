@@ -3,7 +3,8 @@ import { useContext, useState } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { CartContext } from '../context/CartContext';
 import { Link } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
+
 
 interface ProductCardProps {
   id: string;
@@ -40,18 +41,16 @@ export function ProductCard({ id, name, price, image, category, sku, isWishliste
     }
 
     setIsWishlistLoading(true);
-    if (wishlisted) {
-      await supabase
-        .from('wishlist_items')
-        .delete()
-        .eq('user_id', auth.user.id)
-        .eq('product_id', id);
-      setWishlisted(false);
-    } else {
-      await supabase
-        .from('wishlist_items')
-        .insert({ user_id: auth.user.id, product_id: id });
-      setWishlisted(true);
+    try {
+      if (wishlisted) {
+        await api.wishlist.remove(id);
+        setWishlisted(false);
+      } else {
+        await api.wishlist.add(id);
+        setWishlisted(true);
+      }
+    } catch (e) {
+      console.error("Wishlist action failed", e);
     }
     setIsWishlistLoading(false);
   };
@@ -105,11 +104,10 @@ export function ProductCard({ id, name, price, image, category, sku, isWishliste
           <button
             onClick={handleWishlist}
             disabled={isWishlistLoading}
-            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg border transition-colors font-medium text-sm ${
-              wishlisted
-                ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'
-                : 'border-gray-200 text-gray-600 hover:border-red-200 hover:text-red-600'
-            }`}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg border transition-colors font-medium text-sm ${wishlisted
+              ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'
+              : 'border-gray-200 text-gray-600 hover:border-red-200 hover:text-red-600'
+              }`}
           >
             <Heart size={16} fill={wishlisted ? 'currentColor' : 'none'} />
           </button>

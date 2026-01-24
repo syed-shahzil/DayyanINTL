@@ -3,6 +3,7 @@ import { Menu, X, ShoppingCart, Heart, User, LogOut } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import { CartContext } from '../context/CartContext';
 import { Link, useNavigate } from 'react-router-dom';
+import companyLogo from '../assets/company_logo.jpeg';
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -30,8 +31,8 @@ export function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <Link to="/" className="flex items-center gap-2 group">
-            <div className="w-10 h-10 bg-gradient-to-br from-primary-600 to-teal-600 rounded-lg flex items-center justify-center text-white font-bold text-lg group-hover:shadow-md transition-shadow">
-              D
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden">
+              <img src={companyLogo} alt="DayyanINTL Logo" className="w-full h-full object-cover" />
             </div>
             <div className="flex flex-col">
               <span className="font-bold text-gray-900 text-lg">DayyanINTL</span>

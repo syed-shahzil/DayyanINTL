@@ -1,7 +1,7 @@
 import { useContext, useEffect, useState } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import { ArrowLeft, Package } from 'lucide-react';
 
 interface OrderItem {
@@ -9,6 +9,7 @@ interface OrderItem {
   product_id: string;
   quantity: number;
   price_at_purchase: number;
+  product_name?: string;
   product?: { name: string };
 }
 
@@ -17,7 +18,7 @@ interface Order {
   status: string;
   total_amount: number;
   created_at: string;
-  order_items?: OrderItem[];
+  items?: OrderItem[]; // Backend returns 'items', Supabase returned 'order_items'
 }
 
 export function OrdersPage() {
@@ -33,13 +34,12 @@ export function OrdersPage() {
   }, [auth?.user]);
 
   async function fetchOrders() {
-    const { data } = await supabase
-      .from('orders')
-      .select('*, order_items(*, product:products(name))')
-      .eq('user_id', auth!.user!.id)
-      .order('created_at', { ascending: false });
-
-    setOrders((data as Order[]) || []);
+    try {
+      const data = await api.orders.myOrders();
+      setOrders(data);
+    } catch (e) {
+      console.error("Failed to fetch orders", e);
+    }
     setLoading(false);
   }
 
@@ -156,13 +156,13 @@ export function OrdersPage() {
                 </div>
               </div>
 
-              {order.order_items && order.order_items.length > 0 && (
+              {order.items && order.items.length > 0 && (
                 <div className="border-t border-gray-200 pt-4">
                   <p className="text-sm font-medium text-gray-700 mb-2">Items:</p>
                   <div className="space-y-1">
-                    {order.order_items.map((item) => (
+                    {order.items.map((item) => (
                       <p key={item.id} className="text-sm text-gray-600">
-                        {item.product?.name} × {item.quantity} @ ${item.price_at_purchase.toFixed(2)}
+                        {item.product_name || item.product?.name} × {item.quantity} @ ${item.price_at_purchase.toFixed(2)}
                       </p>
                     ))}
                   </div>

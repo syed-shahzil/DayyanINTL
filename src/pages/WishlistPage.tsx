@@ -1,7 +1,7 @@
 import { useContext, useEffect, useState } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import { ProductCard } from '../components/ProductCard';
 import { Heart, ArrowLeft } from 'lucide-react';
 
@@ -31,12 +31,12 @@ export function WishlistPage() {
   }, [auth?.user]);
 
   async function fetchWishlist() {
-    const { data } = await supabase
-      .from('wishlist_items')
-      .select('*, product:products(*)')
-      .eq('user_id', auth!.user!.id);
-
-    setItems(data || []);
+    try {
+      const data = await api.wishlist.list();
+      setItems(data as WishlistItem[]);
+    } catch (e) {
+      console.error("Failed to fetch wishlist", e);
+    }
     setLoading(false);
   }
 
