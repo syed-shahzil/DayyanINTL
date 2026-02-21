@@ -1,123 +1,46 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import React from 'react';
 import { Navbar } from './components/Navbar';
+import { ProductGrid } from './components/ProductGrid';
 import { Footer } from './components/Footer';
-import { ProtectedRoute } from './components/ProtectedRoute';
-import { HomePage } from './pages/HomePage';
-import { ProductsPage } from './pages/ProductsPage';
-import { ProductDetailPage } from './pages/ProductDetailPage';
-import { CartPage } from './pages/CartPage';
-import { CheckoutPage } from './pages/CheckoutPage';
-import { WishlistPage } from './pages/WishlistPage';
-import { ProfilePage } from './pages/ProfilePage';
-import { OrdersPage } from './pages/OrdersPage';
-import { LoginPage } from './pages/LoginPage';
-import { SignupPage } from './pages/SignupPage';
-import { ManagementDashboard } from './pages/ManagementDashboard';
-import { OwnerDashboard } from './pages/OwnerDashboard';
-import { useContext } from 'react';
-import { AuthContext } from './context/AuthContext';
-import { CartProvider } from './context/CartContext';
-
-function LayoutWithNav() {
-  const auth = useContext(AuthContext);
-
-  if (auth?.loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-600">Loading...</p>
-      </div>
-    );
-  }
-
-  return (
-    <CartProvider userId={auth?.user?.id}>
-      <div className="flex flex-col min-h-screen">
-        <Navbar />
-        <main className="flex-1">
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/products" element={<ProductsPage />} />
-            <Route path="/product/:id" element={<ProductDetailPage />} />
-            <Route path="/cart" element={<CartPage />} />
-            <Route
-              path="/checkout"
-              element={
-                <ProtectedRoute>
-                  <CheckoutPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/wishlist"
-              element={
-                <ProtectedRoute>
-                  <WishlistPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/profile"
-              element={
-                <ProtectedRoute>
-                  <ProfilePage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/orders"
-              element={
-                <ProtectedRoute>
-                  <OrdersPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/management"
-              element={
-                <ProtectedRoute requiredRole="management">
-                  <ManagementDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/owner"
-              element={
-                <ProtectedRoute requiredRole="owner">
-                  <OwnerDashboard />
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
-        </main>
-        <Footer />
-      </div>
-    </CartProvider>
-  );
-}
 
 function App() {
   return (
-    <Router>
-      <AuthProvider>
-        <Routes>
-          <Route element={<LayoutWithNav />}>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/products" element={<ProductsPage />} />
-            <Route path="/product/:id" element={<ProductDetailPage />} />
-            <Route path="/cart" element={<CartPage />} />
-            <Route path="/checkout" element={<CheckoutPage />} />
-            <Route path="/wishlist" element={<WishlistPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/orders" element={<OrdersPage />} />
-            <Route path="/management" element={<ManagementDashboard />} />
-            <Route path="/owner" element={<OwnerDashboard />} />
-          </Route>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<SignupPage />} />
-        </Routes>
-      </AuthProvider>
-    </Router>
+    <div className="min-h-screen bg-background selection:bg-primary-accent/30 selection:text-background">
+      {/* Radiant Background Effect */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-0 -left-1/4 w-1/2 h-1/2 bg-primary-900/10 blur-[120px] rounded-full" />
+        <div className="absolute bottom-0 -right-1/4 w-1/2 h-1/2 bg-medical-teal/5 blur-[120px] rounded-full" />
+      </div>
+
+      <Navbar />
+
+      <main className="relative z-10">
+        {/* Hero Section */}
+        <section className="pt-32 pb-20 px-6 text-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-600/10 border border-primary-500/20 text-xs font-semibold text-primary-accent mb-8 animate-fade-in">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary-500"></span>
+            </span>
+            Premium Surgical Manufacturing
+          </div>
+
+          <h1 className="text-5xl md:text-7xl font-display font-bold text-white mb-8 tracking-tighter leading-tight animate-slide-up">
+            Precision in Every <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-accent to-medical-teal">Incision.</span>
+          </h1>
+
+          <p className="text-neutral-400 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed animate-slide-up [animation-delay:100ms]">
+            Dayyan International provides high-quality surgical instruments designed for the most demanding medical environments.
+          </p>
+        </section>
+
+        {/* Product System Grid */}
+        <ProductGrid />
+      </main>
+
+      <Footer />
+    </div>
   );
 }
 
